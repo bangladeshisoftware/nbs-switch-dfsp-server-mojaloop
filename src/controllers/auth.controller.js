@@ -1,9 +1,8 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const bcrypt  = require('bcryptjs');
+const jwt     = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/db');
-const { sendOTPEmail } = require('../services/email.service');
-const geoip = require('geoip-lite');
+
 const OTP_EXPIRY_MINUTES = 10;
 
 // POST /auth/login
@@ -18,7 +17,7 @@ exports.login = async (req, res) => {
        FROM dfsp_users u
        JOIN dfsps d ON u.dfsp_id = d.dfsp_id
        WHERE (u.username = ? OR u.email = ?) AND u.is_active = 1`,
-      [username, username],
+      [username, username]
     );
 
     const user = rows[0];
@@ -27,44 +26,25 @@ exports.login = async (req, res) => {
     const valid = await bcrypt.compare(password, user.password);
     if (!valid) return res.status(401).json({ error: 'Invalid credentials' });
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otp       = Math.floor(100000 + Math.random() * 900000);
     const otpExpiry = new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
 
     await pool.execute(
       `UPDATE dfsp_users SET otp = ?, otp_expires_at = ? WHERE id = ?`,
-      [otp, otpExpiry, user.id],
+      [otp, otpExpiry, user.id]
     );
-    // send email
-    let emailSent;
-    try {
-      await sendOTPEmail({
-        to: user.email,
-        username: user.username,
-        otp,
-      });
-      emailSent = true;
-      console.log(`[AUTH] OTP sent to ${user.email}`);
-    } catch (emailErr) {
-      console.error(`[AUTH] Email failed: ${emailErr.message}`);
-      if (process.env.NODE_ENV !== 'production') {
-        console.log(`[DEV] OTP for ${user.username}: ${otp}`);
-      }
-    }
-    // send email
 
-    // Dev mode
+    // Dev mode — console এ দেখাও
     if (process.env.NODE_ENV !== 'production') {
-      console.log(
-        `🔑 [DEV] OTP for ${user.username} (${user.dfsp_id}): ${otp}`,
-      );
+      console.log(`🔑 [DEV] OTP for ${user.username} (${user.dfsp_id}): ${otp}`);
     }
 
     res.json({
-      otp_status: true,
-      email_hint: maskEmail(user.email),
-      dfsp_id: user.dfsp_id,
-      dfsp_name: user.dfsp_name,
-      expires_in: `${OTP_EXPIRY_MINUTES} minutes`,
+      otp_status:  true,
+      email_hint:  maskEmail(user.email),
+      dfsp_id:     user.dfsp_id,
+      dfsp_name:   user.dfsp_name,
+      expires_in:  `${OTP_EXPIRY_MINUTES} minutes`,
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -84,64 +64,38 @@ exports.verifyOtp = async (req, res) => {
        FROM dfsp_users u
        JOIN dfsps d ON u.dfsp_id = d.dfsp_id
        WHERE (u.username = ? OR u.email = ?) AND u.is_active = 1 AND u.otp = ?`,
-      [username, username, otp],
+      [username, username, otp]
     );
 
     const user = rows[0];
     if (!user) return res.status(401).json({ error: 'Invalid OTP' });
     if (user.is_expired) {
-      await pool.execute(
-        `UPDATE dfsp_users SET otp = NULL, otp_expires_at = NULL WHERE id = ?`,
-        [user.id],
-      );
-      return res
-        .status(401)
-        .json({ error: 'OTP expired. Please login again.' });
+      await pool.execute(`UPDATE dfsp_users SET otp = NULL, otp_expires_at = NULL WHERE id = ?`, [user.id]);
+      return res.status(401).json({ error: 'OTP expired. Please login again.' });
     }
 
     await pool.execute(
       `UPDATE dfsp_users SET otp = NULL, otp_expires_at = NULL, last_login = NOW() WHERE id = ?`,
-      [user.id],
-    );
-        // Get real client IP (behind proxy if any)
-    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
-    if (ip.includes(',')) ip = ip.split(',')[0].trim();
-
-    // Lookup location using geoip-lite
-    const geo = geoip.lookup(ip);
-    const location = geo
-      ? `${geo.city || 'Unknown City'}, ${geo.country || 'Unknown Country'}`
-      : 'Unknown';
-
-    // Insert login activity
-    await pool.execute(
-      `INSERT INTO activity_logs (username, email, login_time, ip_address, location, type)
-       VALUES (?, ?, NOW(), ?, ?, ?)`,
-      [user.username, user.email, ip, location, 'dfsp']
+      [user.id]
     );
 
     const token = jwt.sign(
-      {
-        id: user.id,
-        dfsp_id: user.dfsp_id,
-        username: user.username,
-        role: user.role,
-      },
+      { id: user.id, dfsp_id: user.dfsp_id, username: user.username, role: user.role },
       process.env.JWT_SECRET,
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' },
+      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
     );
 
     res.json({
       token,
       user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
+        id:        user.id,
+        username:  user.username,
+        email:     user.email,
         full_name: user.full_name,
-        role: user.role,
-        dfsp_id: user.dfsp_id,
+        role:      user.role,
+        dfsp_id:   user.dfsp_id,
         dfsp_name: user.dfsp_name,
-        currency: user.currency,
+        currency:  user.currency,
       },
     });
   } catch (err) {
@@ -159,7 +113,7 @@ exports.getMe = async (req, res) => {
        FROM dfsp_users u
        JOIN dfsps d ON u.dfsp_id = d.dfsp_id
        WHERE u.id = ?`,
-      [req.user.id],
+      [req.user.id]
     );
     res.json({ data: rows[0] });
   } catch (err) {
@@ -173,7 +127,7 @@ exports.getUsers = async (req, res) => {
     const [rows] = await pool.execute(
       `SELECT id, username, email, full_name, role, is_active, last_login, created_at
        FROM dfsp_users WHERE dfsp_id = ? ORDER BY created_at DESC`,
-      [req.user.dfsp_id],
+      [req.user.dfsp_id]
     );
     res.json({ data: rows });
   } catch (err) {
@@ -193,23 +147,13 @@ exports.createUser = async (req, res) => {
     await pool.execute(
       `INSERT INTO dfsp_users (id, dfsp_id, username, email, password, full_name, role)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [
-        uuidv4(),
-        req.user.dfsp_id,
-        username,
-        email,
-        hashed,
-        full_name,
-        role || 'VIEWER',
-      ],
+      [uuidv4(), req.user.dfsp_id, username, email, hashed, full_name, role || 'VIEWER']
     );
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY')
-      return res
-        .status(409)
-        .json({ error: 'Username or email already exists' });
+      return res.status(409).json({ error: 'Username or email already exists' });
     res.status(500).json({ error: err.message });
   }
 };
@@ -226,7 +170,7 @@ exports.updateUser = async (req, res) => {
     await pool.execute(
       `UPDATE dfsp_users SET role = ?, is_active = ?, full_name = ?, updated_at = NOW()
        WHERE id = ? AND dfsp_id = ?`,
-      [role, is_active, full_name, id, req.user.dfsp_id],
+      [role, is_active, full_name, id, req.user.dfsp_id]
     );
     res.json({ message: 'User updated' });
   } catch (err) {

@@ -7,8 +7,6 @@ const dashCtrl = require('../controllers/dashboard.controller');
 const txCtrl = require('../controllers/transfers.controller');
 const merchantCtrl = require('../controllers/merchants.controller');
 const liqCtrl = require('../controllers/liquidity.controller');
-const payCtrl = require('../controllers/payment.controller');
-const activityCtrl = require('../controllers/activity.controller');
 
 // ─── AUTH ────────────────────────────────────────────────────
 router.post('/auth/login', authCtrl.login);
@@ -39,15 +37,5 @@ router.delete('/merchants/:id', auth, merchantCtrl.deleteMerchant);
 router.get('/liquidity/position', auth, liqCtrl.getPosition);
 router.get('/liquidity/limits', auth, liqCtrl.getLimits);
 router.get('/liquidity/changes', auth, liqCtrl.getChanges);
-
-// ─── PAYMENT (P2P) ───────────────────────────────────────────
-router.get('/payment/merchants', auth, payCtrl.getSenderMerchants);
-router.post('/payment/lookup', auth, payCtrl.partyLookup);
-router.post('/payment/quote', auth, payCtrl.initQuote);
-router.post('/payment/transfer', auth, payCtrl.initTransfer);
-
-// ─── ACTIVITY LOGS ───────────────────────────────────────────
-router.get('/activity-logs',       auth, activityCtrl.getLogs);
-router.get('/activity-logs/stats', auth, activityCtrl.getStats);
 
 module.exports = router;

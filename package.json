@@ -16,7 +16,6 @@
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.6.5",
     "nodemailer": "^6.9.7",
-    "geoip-lite": "^1.4.10",
     "uuid": "^9.0.0"
   }
 }
