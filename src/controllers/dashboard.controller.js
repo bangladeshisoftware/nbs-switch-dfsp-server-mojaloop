@@ -1,7 +1,6 @@
 const { pool } = require('../config/db');
 const axios    = require('axios');
 
-// GET /dashboard/summary
 exports.getSummary = async (req, res) => {
   const { dfsp_id } = req.user;
   try {

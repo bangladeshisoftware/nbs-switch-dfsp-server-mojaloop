@@ -5,7 +5,6 @@ const { pool } = require('../config/db');
 
 const OTP_EXPIRY_MINUTES = 10;
 
-// POST /auth/login
 exports.login = async (req, res) => {
   try {
     const { username, password } = req.body;
@@ -34,11 +33,6 @@ exports.login = async (req, res) => {
       [otp, otpExpiry, user.id]
     );
 
-    // Dev mode — console এ দেখাও
-    if (process.env.NODE_ENV !== 'production') {
-      console.log(`🔑 [DEV] OTP for ${user.username} (${user.dfsp_id}): ${otp}`);
-    }
-
     res.json({
       otp_status:  true,
       email_hint:  maskEmail(user.email),
@@ -51,7 +45,6 @@ exports.login = async (req, res) => {
   }
 };
 
-// POST /auth/verify-otp
 exports.verifyOtp = async (req, res) => {
   try {
     const { username, otp } = req.body;
@@ -103,7 +96,6 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-// GET /auth/me
 exports.getMe = async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -121,7 +113,7 @@ exports.getMe = async (req, res) => {
   }
 };
 
-// GET /auth/users — DFSP নিজের users
+
 exports.getUsers = async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -135,7 +127,6 @@ exports.getUsers = async (req, res) => {
   }
 };
 
-// POST /auth/users — নতুন user তৈরি (DFSP ADMIN only)
 exports.createUser = async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN')
@@ -158,7 +149,6 @@ exports.createUser = async (req, res) => {
   }
 };
 
-// PUT /auth/users/:id
 exports.updateUser = async (req, res) => {
   try {
     if (req.user.role !== 'ADMIN')

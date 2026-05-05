@@ -16,4 +16,4 @@ app.use('/api/v1', routes);
 
 app.get('/health', (req, res) => res.json({ status: 'OK', service: 'DFSP Portal API' }));
 
-app.listen(PORT, () => console.log(`✅ DFSP Portal Backend running on port ${PORT}`));
+app.listen(PORT, () => console.log(`DFSP Portal Backend running on port ${PORT}`));

@@ -1,6 +1,5 @@
 const { pool } = require('../config/db');
 
-// GET /transfers
 exports.getTransfers = async (req, res) => {
   const { dfsp_id } = req.user;
   const { status, direction, from, to, search, page = 1, limit = 50 } = req.query;
@@ -39,7 +38,6 @@ exports.getTransfers = async (req, res) => {
   }
 };
 
-// GET /transfers/:id
 exports.getById = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
@@ -55,7 +53,6 @@ exports.getById = async (req, res) => {
   }
 };
 
-// GET /transfers/stats
 exports.getStats = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
