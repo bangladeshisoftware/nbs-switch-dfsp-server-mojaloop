@@ -38,6 +38,7 @@ exports.getTransfers = async (req, res) => {
   }
 };
 
+
 exports.getById = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
@@ -56,7 +57,6 @@ exports.getById = async (req, res) => {
 exports.getStats = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
-    // Last 7 days daily stats
     const [daily] = await pool.execute(`
       SELECT
         DATE(created_at)                                                AS date,
@@ -73,7 +73,7 @@ exports.getStats = async (req, res) => {
       [dfsp_id, dfsp_id, dfsp_id, dfsp_id]
     );
 
-    // By currency
+    // by currency
     const [byCurrency] = await pool.execute(`
       SELECT currency, COUNT(*) AS count, SUM(amount) AS total_amount
       FROM transfers
