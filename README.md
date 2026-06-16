@@ -1,4 +1,4 @@
-# DFSP Portal — Backend API
+# DFSP Portal - Backend API
 
 A dedicated backend server for **DFSP (Digital Financial Service Provider) operators** to access their own financial data within the R Switch ecosystem. Each DFSP gets a scoped, authenticated view into the shared R Switch database — seeing only their own transfers, positions, settlement records, and deposit history.
 
@@ -460,4 +460,4 @@ Only `ADMIN` role can create or modify users. Attempting these actions with a lo
 
 ## License
 
-Private — R Switch / Bangladeshi Software LTD. All rights reserved.
+Private - R Switch / Bangladeshi Software LTD. All rights reserved.
