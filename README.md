@@ -65,37 +65,37 @@ The R Switch hub writes all transfer, position, and settlement data via its Kafk
 Create `.env` in the project root:
 
 ```dotenv
-# ── Server ────────────────────────────────────────────────
+# Server
 PORT=5000
 NODE_ENV=development
 
-# ── MySQL (same database as R Switch) ─────────────────────
+# MySQL (same database as R Switch)
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
 DB_PASSWORD=your_db_password
 DB_NAME=r_switch
 
-# ── JWT ───────────────────────────────────────────────────
+# JWT
 JWT_SECRET=your-dfsp-portal-secret
 JWT_EXPIRES_IN=365d
 
-# ── Mojaloop Services ─────────────────────────────────────
+# Mojaloop Services
 CENTRAL_LEDGER_URL=https://your-ledger.domain.com
 SETTLEMENT_URL=https://your-settlement.domain.com
 ALS_URL=https://your-als.domain.com
 
-# ── Email (SMTP) ──────────────────────────────────────────
+# Email (SMTP)
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USER=noreply@example.com
 SMTP_PASS=your_smtp_password
 SMTP_FROM=noreply@example.com
 
-# ── CORS ──────────────────────────────────────────────────
+# CORS
 FRONTEND_URL=https://your-dfsp-portal.domain.com
 
-# ── Defaults ──────────────────────────────────────────────
+# Defaults
 ALS_STRICT=true
 DEFAULT_CURRENCY=BDT
 ```
