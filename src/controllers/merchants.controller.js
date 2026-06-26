@@ -1,3 +1,10 @@
+/**************************************************************************
+ * Copyright © 2026 Bangladeshi Software Ltd. All rights reserved.
+ * Distributed under the license terms specified in this repository.
+ *
+ * ORIGINAL AUTHOR: Muhammad Nasim (Developer)
+ **************************************************************************/
+
 const { pool } = require('../config/db');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
@@ -13,11 +20,13 @@ async function alsRegisterParty({ dfspId, currency, idType, idValue }) {
     {
       headers: {
         'FSPIOP-Source': dfspId,
-        'Accept':        'application/vnd.interoperability.participants+json;version=1.1',
-        'Content-Type':  'application/vnd.interoperability.participants+json;version=1.1',
-        'Date':          new Date().toUTCString(),
+        Accept:
+          'application/vnd.interoperability.participants+json;version=1.1',
+        'Content-Type':
+          'application/vnd.interoperability.participants+json;version=1.1',
+        Date: new Date().toUTCString(),
       },
-    }
+    },
   );
   return res;
 }
@@ -28,7 +37,7 @@ async function alsDeleteParty({ dfspId, idType, idValue }) {
   await axios.delete(url, {
     headers: {
       'FSPIOP-Source': dfspId,
-      'Date':          new Date().toUTCString(),
+      Date: new Date().toUTCString(),
     },
   });
 }
@@ -39,21 +48,37 @@ exports.getMerchants = async (req, res) => {
   const { status, search, page = 1, limit = 20 } = req.query;
   try {
     const conditions = [`dfsp_id = ?`];
-    const values     = [dfsp_id];
+    const values = [dfsp_id];
 
-    if (status && status !== 'ALL') { conditions.push(`status = ?`);              values.push(status); }
-    if (search)                     { conditions.push(`(business_name LIKE ? OR merchant_id LIKE ? OR phone LIKE ?)`); values.push(`%${search}%`, `%${search}%`, `%${search}%`); }
+    if (status && status !== 'ALL') {
+      conditions.push(`status = ?`);
+      values.push(status);
+    }
+    if (search) {
+      conditions.push(
+        `(business_name LIKE ? OR merchant_id LIKE ? OR phone LIKE ?)`,
+      );
+      values.push(`%${search}%`, `%${search}%`, `%${search}%`);
+    }
 
-    const where  = `WHERE ${conditions.join(' AND ')}`;
+    const where = `WHERE ${conditions.join(' AND ')}`;
     const offset = (parseInt(page) - 1) * parseInt(limit);
 
-    const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM merchants ${where}`, values);
+    const [[{ total }]] = await pool.execute(
+      `SELECT COUNT(*) AS total FROM merchants ${where}`,
+      values,
+    );
     const [rows] = await pool.execute(
       `SELECT * FROM merchants ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-      [...values, parseInt(limit), offset]
+      [...values, parseInt(limit), offset],
     );
 
-    res.json({ data: rows, total, page: parseInt(page), limit: parseInt(limit) });
+    res.json({
+      data: rows,
+      total,
+      page: parseInt(page),
+      limit: parseInt(limit),
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -65,7 +90,7 @@ exports.getById = async (req, res) => {
   try {
     const [rows] = await pool.execute(
       `SELECT * FROM merchants WHERE id = ? AND dfsp_id = ?`,
-      [req.params.id, dfsp_id]
+      [req.params.id, dfsp_id],
     );
     if (!rows[0]) return res.status(404).json({ error: 'Merchant not found' });
     res.json({ data: rows[0] });
@@ -79,23 +104,38 @@ exports.create = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
     const {
-      business_name, business_type, owner_name, phone, email,
-      address, nid, tin, account_number, category, daily_limit, monthly_limit,
+      business_name,
+      business_type,
+      owner_name,
+      phone,
+      email,
+      address,
+      nid,
+      tin,
+      account_number,
+      category,
+      daily_limit,
+      monthly_limit,
       // ALS party fields
-      id_type  = 'MSISDN',
-      id_value,             
-      first_name, middle_name, last_name, dob,
+      id_type = 'MSISDN',
+      id_value,
+      first_name,
+      middle_name,
+      last_name,
+      dob,
     } = req.body;
 
     if (!business_name || !phone)
-      return res.status(400).json({ error: 'business_name and phone are required' });
+      return res
+        .status(400)
+        .json({ error: 'business_name and phone are required' });
 
     const alsIdValue = id_value || phone;
 
-    //  step 1: Duplicate check 
+    //  step 1: Duplicate check
     const [existing] = await pool.execute(
       `SELECT id FROM merchants WHERE dfsp_id = ? AND id_type = ? AND id_value = ?`,
-      [dfsp_id, id_type, alsIdValue]
+      [dfsp_id, id_type, alsIdValue],
     );
     if (existing.length > 0) {
       return res.status(400).json({
@@ -105,17 +145,18 @@ exports.create = async (req, res) => {
 
     // step 2: ALS এ Party register
     const [[dfsp]] = await pool.execute(
-      `SELECT currency FROM dfsps WHERE dfsp_id = ? LIMIT 1`, [dfsp_id]
+      `SELECT currency FROM dfsps WHERE dfsp_id = ? LIMIT 1`,
+      [dfsp_id],
     );
     const currency = dfsp?.currency || process.env.DEFAULT_CURRENCY || 'BDT';
 
     let alsStatus = 'pending';
     try {
       const alsRes = await alsRegisterParty({
-        dfspId:   dfsp_id,
+        dfspId: dfsp_id,
         currency,
-        idType:   id_type,
-        idValue:  alsIdValue,
+        idType: id_type,
+        idValue: alsIdValue,
       });
 
       // If ALS async — 202 Accepted then it success
@@ -143,9 +184,10 @@ exports.create = async (req, res) => {
 
     // step 3: save db
     const merchantId = `MRC-${dfsp_id}-${Date.now()}`;
-    const id         = uuidv4();
+    const id = uuidv4();
 
-    await pool.execute(`
+    await pool.execute(
+      `
       INSERT INTO merchants
         (id, dfsp_id, merchant_id, business_name, business_type, owner_name,
          phone, email, address, nid, tin, account_number, category,
@@ -154,28 +196,39 @@ exports.create = async (req, res) => {
          als_status, currency)
       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        id, dfsp_id, merchantId,
-        business_name, business_type, owner_name,
-        phone, email, address, nid, tin, account_number, category,
-        daily_limit || 0, monthly_limit || 0,
-        id_type, alsIdValue,
+        id,
+        dfsp_id,
+        merchantId,
+        business_name,
+        business_type,
+        owner_name,
+        phone,
+        email,
+        address,
+        nid,
+        tin,
+        account_number,
+        category,
+        daily_limit || 0,
+        monthly_limit || 0,
+        id_type,
+        alsIdValue,
         first_name || owner_name || business_name,
         middle_name || null,
-        last_name   || null,
-        dob         || null,
+        last_name || null,
+        dob || null,
         alsStatus,
         currency,
-      ]
+      ],
     );
 
     res.status(201).json({
-      message:     'Merchant registered successfully',
+      message: 'Merchant registered successfully',
       merchant_id: merchantId,
       id,
-      als_status:  alsStatus,
+      als_status: alsStatus,
       party: { id_type, id_value: alsIdValue },
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -186,19 +239,45 @@ exports.update = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
     const {
-      business_name, business_type, owner_name, phone, email,
-      address, nid, tin, account_number, category, daily_limit, monthly_limit, notes,
+      business_name,
+      business_type,
+      owner_name,
+      phone,
+      email,
+      address,
+      nid,
+      tin,
+      account_number,
+      category,
+      daily_limit,
+      monthly_limit,
+      notes,
     } = req.body;
 
-    await pool.execute(`
+    await pool.execute(
+      `
       UPDATE merchants SET
         business_name=?, business_type=?, owner_name=?, phone=?, email=?,
         address=?, nid=?, tin=?, account_number=?, category=?,
         daily_limit=?, monthly_limit=?, notes=?, updated_at=NOW()
       WHERE id = ? AND dfsp_id = ?`,
-      [business_name, business_type, owner_name, phone, email,
-       address, nid, tin, account_number, category,
-       daily_limit, monthly_limit, notes, req.params.id, dfsp_id]
+      [
+        business_name,
+        business_type,
+        owner_name,
+        phone,
+        email,
+        address,
+        nid,
+        tin,
+        account_number,
+        category,
+        daily_limit,
+        monthly_limit,
+        notes,
+        req.params.id,
+        dfsp_id,
+      ],
     );
 
     res.json({ message: 'Merchant updated' });
@@ -218,12 +297,13 @@ exports.updateStatus = async (req, res) => {
     if (!validStatuses.includes(status))
       return res.status(400).json({ error: 'Invalid status' });
 
-    await pool.execute(`
+    await pool.execute(
+      `
       UPDATE merchants SET
         status = ?, notes = ?,
         approved_by = ?, approved_at = NOW(), updated_at = NOW()
       WHERE id = ? AND dfsp_id = ?`,
-      [status, notes, req.user.id, req.params.id, dfsp_id]
+      [status, notes, req.user.id, req.params.id, dfsp_id],
     );
 
     res.json({ message: `Merchant ${status.toLowerCase()}` });
@@ -236,7 +316,8 @@ exports.updateStatus = async (req, res) => {
 exports.getStats = async (req, res) => {
   const { dfsp_id } = req.user;
   try {
-    const [[stats]] = await pool.execute(`
+    const [[stats]] = await pool.execute(
+      `
       SELECT
         COUNT(*)                     AS total,
         SUM(status = 'ACTIVE')       AS active,
@@ -244,14 +325,15 @@ exports.getStats = async (req, res) => {
         SUM(status = 'SUSPENDED')    AS suspended,
         SUM(status = 'REJECTED')     AS rejected
       FROM merchants WHERE dfsp_id = ?`,
-      [dfsp_id]
+      [dfsp_id],
     );
 
-    const [byCategory] = await pool.execute(`
+    const [byCategory] = await pool.execute(
+      `
       SELECT category, COUNT(*) AS count
       FROM merchants WHERE dfsp_id = ? AND category IS NOT NULL
       GROUP BY category ORDER BY count DESC LIMIT 10`,
-      [dfsp_id]
+      [dfsp_id],
     );
 
     res.json({ stats, by_category: byCategory });
@@ -271,13 +353,12 @@ exports.deleteMerchant = async (req, res) => {
   try {
     const [[merchant]] = await pool.execute(
       `SELECT * FROM merchants WHERE id = ? AND dfsp_id = ?`,
-      [req.params.id, dfsp_id]
+      [req.params.id, dfsp_id],
     );
 
-    if (!merchant)
-      return res.status(404).json({ error: 'Merchant not found' });
+    if (!merchant) return res.status(404).json({ error: 'Merchant not found' });
 
-    const idType  = merchant.id_type  || 'MSISDN';
+    const idType = merchant.id_type || 'MSISDN';
     const idValue = merchant.id_value || merchant.phone;
 
     let alsStatus = 'skipped';
@@ -288,24 +369,25 @@ exports.deleteMerchant = async (req, res) => {
       } catch (alsErr) {
         if (alsErr.response?.status === 404) {
           alsStatus = 'not_found';
-          console.warn(`[MERCHANT] ALS party already gone: ${idType}/${idValue}`);
+          console.warn(
+            `[MERCHANT] ALS party already gone: ${idType}/${idValue}`,
+          );
         } else {
           alsStatus = 'failed';
         }
       }
     }
 
-    await pool.execute(
-      `DELETE FROM merchants WHERE id = ? AND dfsp_id = ?`,
-      [req.params.id, dfsp_id]
-    );
+    await pool.execute(`DELETE FROM merchants WHERE id = ? AND dfsp_id = ?`, [
+      req.params.id,
+      dfsp_id,
+    ]);
 
     res.json({
-      message:     'Merchant deleted successfully',
+      message: 'Merchant deleted successfully',
       merchant_id: merchant.merchant_id,
-      als_status:  alsStatus,
+      als_status: alsStatus,
     });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

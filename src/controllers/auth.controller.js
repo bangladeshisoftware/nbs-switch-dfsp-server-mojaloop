@@ -1,3 +1,10 @@
+/**************************************************************************
+ * Copyright © 2026 Bangladeshi Software Ltd. All rights reserved.
+ * Distributed under the license terms specified in this repository.
+ *
+ * ORIGINAL AUTHOR: Muhammad Nasim (Developer)
+ **************************************************************************/
+
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { v4: uuidv4 } = require('uuid');
@@ -66,10 +73,10 @@ exports.login = async (req, res) => {
 exports.directLogin = async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token){
+    if (!token) {
       return res.status(400).json({ error: 'Something went wrong!' });
     }
-    
+
     const [rows] = await pool.execute(
       `SELECT u.*, d.name as dfsp_name, d.currency, d.status as dfsp_status
        FROM dfsp_users u
@@ -81,9 +88,8 @@ exports.directLogin = async (req, res) => {
     const user = rows[0];
     if (!user) return res.status(401).json({ error: 'Invalid credentials' });
 
-
     res.json({
-      token:user?.token,
+      token: user?.token,
       user: {
         id: user.id,
         username: user.full_name,
@@ -132,7 +138,10 @@ exports.verifyOtp = async (req, res) => {
       [user.id],
     );
 
-    let ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    let ip =
+      req.headers['x-forwarded-for'] ||
+      req.connection.remoteAddress ||
+      'unknown';
     if (ip.includes(',')) ip = ip.split(',')[0].trim();
 
     const geo = geoip.lookup(ip);
@@ -144,7 +153,7 @@ exports.verifyOtp = async (req, res) => {
     await pool.execute(
       `INSERT INTO activity_logs (username, email, login_time, ip_address, location, type)
        VALUES (?, ?, NOW(), ?, ?, ?)`,
-      [user.username, user.email, ip, location, 'dfsp']
+      [user.username, user.email, ip, location, 'dfsp'],
     );
 
     const token = jwt.sign(
@@ -176,7 +185,6 @@ exports.verifyOtp = async (req, res) => {
   }
 };
 
-
 exports.getMe = async (req, res) => {
   try {
     const [rows] = await pool.execute(
@@ -193,7 +201,6 @@ exports.getMe = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 exports.getUsers = async (req, res) => {
   try {

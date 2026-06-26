@@ -1,3 +1,10 @@
+/**************************************************************************
+ * Copyright © 2026 Bangladeshi Software Ltd. All rights reserved.
+ * Distributed under the license terms specified in this repository.
+ *
+ * ORIGINAL AUTHOR: Muhammad Nasim (Developer)
+ **************************************************************************/
+
 const { pool } = require('../config/db');
 const axios = require('axios');
 const crypto = require('crypto');
@@ -37,11 +44,9 @@ exports.partyLookup = async (req, res) => {
   const { sender_id, receiver_id_type, receiver_id_value, amount } = req.body;
 
   if (!sender_id || !receiver_id_type || !receiver_id_value)
-    return res
-      .status(400)
-      .json({
-        error: 'sender_id, receiver_id_type, receiver_id_value required',
-      });
+    return res.status(400).json({
+      error: 'sender_id, receiver_id_type, receiver_id_value required',
+    });
 
   try {
     const [[sender]] = await pool.execute(
