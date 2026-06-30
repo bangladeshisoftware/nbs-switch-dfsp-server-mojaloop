@@ -460,4 +460,4 @@ Only `ADMIN` role can create or modify users. Attempting these actions with a lo
 
 ## License
 
-Private - R Switch / Bangladeshi Software LTD. All rights reserved.
+Private - NB Switch / Bangladeshi Software LTD. All rights reserved.
