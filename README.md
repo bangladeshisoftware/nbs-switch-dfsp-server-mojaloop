@@ -1,8 +1,8 @@
 # DFSP Portal - Backend API
 
-A dedicated backend server for **DFSP (Digital Financial Service Provider) operators** to access their own financial data within the R Switch ecosystem. Each DFSP gets a scoped, authenticated view into the shared R Switch database — seeing only their own transfers, positions, settlement records, and deposit history.
+A dedicated backend server for **DFSP (Digital Financial Service Provider) operators** to access their own financial data within the NB Switch ecosystem. Each DFSP gets a scoped, authenticated view into the shared NB Switch database — seeing only their own transfers, positions, settlement records, and deposit history.
 
-> **Architecture note:** The DFSP Portal shares the same MySQL database (`r_switch`) as the R Switch hub server. The codebase is fully separated — the portal is a lightweight read-focused API server that applies DFSP-scoped queries on the shared schema. No data is duplicated.
+> **Architecture note:** The DFSP Portal shares the same MySQL database (`r_switch`) as the NB Switch hub server. The codebase is fully separated — the portal is a lightweight read-focused API server that applies DFSP-scoped queries on the shared schema. No data is duplicated.
 
 ---
 
@@ -31,7 +31,7 @@ A dedicated backend server for **DFSP (Digital Financial Service Provider) opera
 ┌──────────────────────────────────────────────────────────┐
 │                   Shared Infrastructure                   │
 │                                                          │
-│   R Switch Server          DFSP Portal Server            │
+│   NB Switch Server          DFSP Portal Server            │
 │   (port 4000)              (port 5000)                   │
 │        │                        │                        │
 │        └────────────┬───────────┘                        │
@@ -42,7 +42,7 @@ A dedicated backend server for **DFSP (Digital Financial Service Provider) opera
 └──────────────────────────────────────────────────────────┘
 ```
 
-The R Switch hub writes all transfer, position, and settlement data via its Kafka consumer. The DFSP Portal reads that same data, filtered by `dfsp_id` from the authenticated user's JWT — so each DFSP operator sees only their own records.
+The NB Switch hub writes all transfer, position, and settlement data via its Kafka consumer. The DFSP Portal reads that same data, filtered by `dfsp_id` from the authenticated user's JWT — so each DFSP operator sees only their own records.
 
 ---
 
@@ -69,7 +69,7 @@ Create `.env` in the project root:
 PORT=5000
 NODE_ENV=development
 
-# MySQL (same database as R Switch)
+# MySQL (same database as NB Switch)
 DB_HOST=localhost
 DB_PORT=3306
 DB_USER=root
@@ -100,7 +100,7 @@ ALS_STRICT=true
 DEFAULT_CURRENCY=BDT
 ```
 
-> `JWT_SECRET` here is independent from the R Switch hub's `JWT_SECRET`. DFSP portal tokens are signed with this key and are only valid for DFSP portal endpoints.
+> `JWT_SECRET` here is independent from the NB Switch hub's `JWT_SECRET`. DFSP portal tokens are signed with this key and are only valid for DFSP portal endpoints.
 
 ---
 
@@ -116,7 +116,7 @@ npm install
 
 # 3. Configure environment
 cp .env.example .env
-# Point DB_* to the same MySQL instance as R Switch
+# Point DB_* to the same MySQL instance as NB Switch
 
 # 4. Start the server
 npm start
@@ -137,7 +137,7 @@ All API routes are mounted under `/api/v1`.
 
 ## Authentication
 
-DFSP Portal uses **OTP-based two-factor authentication**, identical in flow to the R Switch portal but scoped to `dfsp_users` (not switch `users`). There is also a **direct token login** path used for seamless cross-portal navigation from the R Switch admin.
+DFSP Portal uses **OTP-based two-factor authentication**, identical in flow to the NB Switch portal but scoped to `dfsp_users` (not switch `users`). There is also a **direct token login** path used for seamless cross-portal navigation from the NB Switch admin.
 
 ### Standard Login (2-step)
 
@@ -186,7 +186,7 @@ POST /api/v1/auth/direct-login
 Body: { token }
 ```
 
-Used when the R Switch admin portal links directly into a DFSP's portal. Validates the `token` field stored in `dfsp_users.token` (issued by R Switch when the DFSP was provisioned). Bypasses OTP — intended for trusted machine-to-machine or admin-initiated navigation.
+Used when the NB Switch admin portal links directly into a DFSP's portal. Validates the `token` field stored in `dfsp_users.token` (issued by NB Switch when the DFSP was provisioned). Bypasses OTP — intended for trusted machine-to-machine or admin-initiated navigation.
 
 ### Session Info
 
@@ -310,7 +310,7 @@ Paginated position change log — same data as history but without date filters,
 GET /api/v1/liquidity/limits
 ```
 
-Last 20 NDC (Net Debit Cap) change records for this DFSP — shows limit type, currency, previous value, new value, who changed it, and when. Set by the R Switch operator; visible here for DFSP reference.
+Last 20 NDC (Net Debit Cap) change records for this DFSP — shows limit type, currency, previous value, new value, who changed it, and when. Set by the NB Switch operator; visible here for DFSP reference.
 
 #### Deposit History
 
@@ -399,7 +399,7 @@ Only `ADMIN` role can create or modify users. Attempting these actions with a lo
 | ------ | --------------------------- | ----------- | ---------------------------------------- |
 | `POST` | `/api/v1/auth/login`        | —           | Step 1: credentials → OTP sent           |
 | `POST` | `/api/v1/auth/verify-otp`   | —           | Step 2: OTP → JWT                        |
-| `POST` | `/api/v1/auth/direct-login` | —           | Token-based direct login (from R Switch) |
+| `POST` | `/api/v1/auth/direct-login` | —           | Token-based direct login (from NB Switch) |
 | `GET`  | `/api/v1/auth/me`           | JWT         | Current user profile + DFSP info         |
 | `GET`  | `/api/v1/auth/users`        | JWT         | List DFSP portal users                   |
 | `POST` | `/api/v1/auth/users`        | JWT (ADMIN) | Create user                              |
@@ -450,9 +450,9 @@ Only `ADMIN` role can create or modify users. Attempting these actions with a lo
 - **DFSP-scoped queries** — every data query includes `dfsp_id` from the authenticated JWT as a mandatory filter. No query can return data for a DFSP other than the caller's.
 - **Role enforcement** — user creation and updates require `ADMIN` role, enforced in controller logic before any DB operation.
 - **CORS restriction** — `origin` is set to `FRONTEND_URL` in production, not `*`.
-- **Activity logging** — every successful login writes to `activity_logs` with IP address and geo-location (type: `dfsp`), visible to R Switch admins in the hub portal.
-- **Separate JWT secret** — `JWT_SECRET` is independent from the R Switch hub, so DFSP portal tokens cannot be used against hub endpoints.
-- **Direct login safety** — `directLogin` validates against `dfsp_users.token` (a long-lived token issued by R Switch during DFSP provisioning), not a password. It should only be called from trusted cross-portal links.
+- **Activity logging** — every successful login writes to `activity_logs` with IP address and geo-location (type: `dfsp`), visible to NB Switch admins in the hub portal.
+- **Separate JWT secret** — `JWT_SECRET` is independent from the NB Switch hub, so DFSP portal tokens cannot be used against hub endpoints.
+- **Direct login safety** — `directLogin` validates against `dfsp_users.token` (a long-lived token issued by NB Switch during DFSP provisioning), not a password. It should only be called from trusted cross-portal links.
 - **bcryptjs** — all passwords hashed at salt rounds of 10.
 - **Parameterized queries** — all MySQL queries use `?` placeholders throughout.
 
